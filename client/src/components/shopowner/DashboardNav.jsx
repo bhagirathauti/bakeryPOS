@@ -3,8 +3,10 @@ import React from 'react'
 export default function DashboardNav({ current, setCurrent, locked }) {
   const items = [
     { key: 'profile', label: 'Shop Profile' },
-    { key: 'sales', label: 'Sales' },
+    { key: 'products', label: 'Products' },
+    { key: 'orders', label: 'Orders' },
     { key: 'cashiers', label: 'Cashiers' },
+    { key: 'sales', label: 'Sales' },
     { key: 'landing', label: 'Shop Landing Page' },
   ]
 

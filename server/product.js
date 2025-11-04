@@ -1,6 +1,6 @@
 const prisma = require('./prismaClient')
 
-async function addProduct(shopId, { productName, price, discount, cgst, sgst }) {
+async function addProduct(shopId, { productName, price, discount, cgst, sgst, stock }) {
   try {
     return await prisma.product.create({
       data: {
@@ -10,6 +10,7 @@ async function addProduct(shopId, { productName, price, discount, cgst, sgst }) 
         discount: Number(discount) || 0,
         cgst: Number(cgst) || 0,
         sgst: Number(sgst) || 0,
+        stock: Number(stock) || 0,
       }
     })
   } catch (err) {

@@ -14,10 +14,26 @@ model User {
   email         String  @unique
   password_hash String
   role          String  @default("shop_owner")
+  shopId        Int?    @map("shop_id")
   createdAt     DateTime @default(now()) @map("created_at")
-  Shop          Shop?
+  Shop          Shop?   @relation("ShopOwner")
+  OwnerShop     Shop?   @relation("ShopCashiers", fields: [shopId], references: [id])
+  CashierProfile CashierProfile?
 
   @@map("users")
+}
+
+model CashierProfile {
+  id          Int     @id @default(autoincrement())
+  userId      Int     @unique @map("user_id")
+  cashierName String  @map("cashier_name")
+  mobile      String?
+  profilePic  String? @map("profile_pic")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("cashier_profiles")
 }
 
 model Shop {
@@ -30,8 +46,9 @@ model Shop {
   profilePic String? @map("profile_pic")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation("ShopOwner", fields: [userId], references: [id])
   products Product[]
+  cashiers User[] @relation("ShopCashiers")
 
   @@map("shops")
 }
@@ -44,9 +61,48 @@ model Product {
   discount    Float   @default(0)
   cgst        Float   @default(0)
   sgst        Float   @default(0)
+  stock       Int     @default(0)
   createdAt   DateTime @default(now()) @map("created_at")
 
   shop Shop   @relation(fields: [shopId], references: [id])
+  orderItems OrderItem[]
 
   @@map("products")
+}
+
+model Order {
+  id              Int       @id @default(autoincrement())
+  shopId          Int       @map("shop_id")
+  cashierId       Int       @map("cashier_id")
+  customerName    String    @map("customer_name")
+  customerMobile  String    @map("customer_mobile")
+  subtotal        Float
+  discount        Float     @default(0)
+  tax             Float
+  total           Float
+  paymentMethod   String    @map("payment_method")
+  status          String    @default("completed")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  orderItems OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id          Int     @id @default(autoincrement())
+  orderId     Int     @map("order_id")
+  productId   Int     @map("product_id")
+  productName String  @map("product_name")
+  quantity    Int
+  price       Float
+  discount    Float
+  cgst        Float
+  sgst        Float
+  total       Float
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
 }

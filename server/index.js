@@ -1,3 +1,6 @@
+// ...existing code...
+// Fetch all users with cashier or shop_owner role
+
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -87,9 +90,9 @@ app.get('/api/products', async (req, res) => {
 
 app.put('/api/products/:id', async (req, res) => {
   const productId = req.params.id;
-  const { productName, price, discount, cgst, sgst } = req.body;
+  const { productName, price, discount, cgst, sgst, stock } = req.body;
   try {
-    const updated = await product.updateProduct(productId, { productName, price, discount, cgst, sgst });
+    const updated = await product.updateProduct(productId, { productName, price, discount, cgst, sgst, stock });
     res.json(updated);
   } catch (err) {
     console.error('Update product error:', err);
@@ -148,6 +151,234 @@ app.post('/api/auth/login', async (req, res) => {
   }
 })
 
+// Create cashier endpoint (shop owner only)
+app.post('/api/cashiers', async (req, res) => {
+  const { shopId, email, password } = req.body;
+  console.log('POST /api/cashiers', { shopId, email });
+  
+  if (!shopId || !email || !password) {
+    return res.status(400).json({ error: 'shopId, email and password required' });
+  }
+  
+  try {
+    // Verify shop exists
+    const shop = await prisma.shop.findUnique({ where: { id: Number(shopId) } });
+    if (!shop) {
+      return res.status(404).json({ error: 'shop_not_found' });
+    }
+    
+    // Create cashier user
+    const cashier = await auth.createUser(email, password, 'cashier', Number(shopId));
+    res.json(cashier);
+  } catch (err) {
+    if (err && (err.message === 'user_exists' || err.code === 'P2002')) {
+      return res.status(400).json({ error: 'user_exists' });
+    }
+    console.error('Create cashier error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// Get cashiers for a shop
+app.get('/api/cashiers', async (req, res) => {
+  const { shopId } = req.query;
+  if (!shopId) return res.status(400).json({ error: 'shopId required' });
+  
+  try {
+    const cashiers = await prisma.user.findMany({
+      where: {
+        shopId: Number(shopId),
+        role: 'cashier'
+      },
+      select: { 
+        id: true, 
+        email: true, 
+        role: true,
+        createdAt: true
+      }
+    });
+    res.json(cashiers);
+  } catch (err) {
+    console.error('Fetch cashiers error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// Delete cashier endpoint
+app.delete('/api/cashiers/:id', async (req, res) => {
+  const cashierId = Number(req.params.id);
+  
+  try {
+    // Verify user is a cashier
+    const user = await prisma.user.findUnique({ where: { id: cashierId } });
+    if (!user || user.role !== 'cashier') {
+      return res.status(404).json({ error: 'cashier_not_found' });
+    }
+    
+    await prisma.user.delete({ where: { id: cashierId } });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('Delete cashier error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// Cashier profile endpoints
+app.get('/api/cashier/profile', async (req, res) => {
+  const userId = req.query.userId;
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+  
+  try {
+    const profile = await prisma.cashierProfile.findUnique({
+      where: { userId: Number(userId) }
+    });
+    res.json(profile || null);
+  } catch (err) {
+    console.error('Get cashier profile error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+app.post('/api/cashier/profile', async (req, res) => {
+  const { userId, cashierName, mobile, profilePic } = req.body;
+  if (!userId) return res.status(400).json({ error: 'userId required' });
+  
+  try {
+    const profile = await prisma.cashierProfile.upsert({
+      where: { userId: Number(userId) },
+      update: { cashierName, mobile, profilePic },
+      create: { userId: Number(userId), cashierName, mobile, profilePic }
+    });
+    res.json({ success: true, profile });
+  } catch (err) {
+    console.error('Upsert cashier profile error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// Order endpoints
+app.post('/api/orders', async (req, res) => {
+  const { shopId, cashierId, customerName, customerMobile, items, paymentMethod } = req.body;
+  
+  if (!shopId || !cashierId || !customerName || !customerMobile || !items || !items.length) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  try {
+    // Check stock availability first
+    for (const item of items) {
+      const product = await prisma.product.findUnique({
+        where: { id: item.id }
+      });
+      
+      if (!product) {
+        return res.status(404).json({ error: `Product ${item.productName} not found` });
+      }
+      
+      if (product.stock < item.quantity) {
+        return res.status(400).json({ 
+          error: `Insufficient stock for ${item.productName}. Available: ${product.stock}, Requested: ${item.quantity}` 
+        });
+      }
+    }
+
+    // Calculate totals
+    let subtotal = 0;
+    let totalDiscount = 0;
+    let totalTax = 0;
+
+    const orderItemsData = items.map(item => {
+      const itemPrice = item.price * item.quantity;
+      const discountAmount = (itemPrice * item.discount) / 100;
+      const afterDiscount = itemPrice - discountAmount;
+      const cgstAmount = (afterDiscount * item.cgst) / 100;
+      const sgstAmount = (afterDiscount * item.sgst) / 100;
+      const itemTotal = afterDiscount + cgstAmount + sgstAmount;
+
+      subtotal += itemPrice;
+      totalDiscount += discountAmount;
+      totalTax += cgstAmount + sgstAmount;
+
+      return {
+        productId: item.id,
+        productName: item.productName,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+        cgst: item.cgst,
+        sgst: item.sgst,
+        total: itemTotal
+      };
+    });
+
+    const total = subtotal - totalDiscount + totalTax;
+
+    // Create order with items and update stock in a transaction
+    const order = await prisma.$transaction(async (prisma) => {
+      // Create the order
+      const newOrder = await prisma.order.create({
+        data: {
+          shopId: Number(shopId),
+          cashierId: Number(cashierId),
+          customerName,
+          customerMobile,
+          subtotal,
+          discount: totalDiscount,
+          tax: totalTax,
+          total,
+          paymentMethod: paymentMethod || 'cash',
+          orderItems: {
+            create: orderItemsData
+          }
+        },
+        include: {
+          orderItems: true
+        }
+      });
+
+      // Decrement stock for each product
+      for (const item of items) {
+        await prisma.product.update({
+          where: { id: item.id },
+          data: {
+            stock: {
+              decrement: item.quantity
+            }
+          }
+        });
+      }
+
+      return newOrder;
+    });
+
+    res.json(order);
+  } catch (err) {
+    console.error('Create order error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+app.get('/api/orders', async (req, res) => {
+  const { shopId } = req.query;
+  if (!shopId) return res.status(400).json({ error: 'shopId required' });
+
+  try {
+    const orders = await prisma.order.findMany({
+      where: { shopId: Number(shopId) },
+      include: {
+        orderItems: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+    res.json(orders);
+  } catch (err) {
+    console.error('Fetch orders error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
 // Shop profile endpoints (using shop module)
 app.get('/api/shop/profile', async (req, res) => {
   const userId = req.query.userId
@@ -179,7 +410,25 @@ app.post('/api/shop/profile', async (req, res) => {
     console.error(err)
     res.status(500).json({ error: 'server_error' })
   }
+
 })
+app.get('/api/users/all', async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: {
+        OR: [
+          { role: 'cashier' },
+          { role: 'shop_owner' }
+        ]
+      },
+      select: { id: true, email: true, role: true }
+    });
+    res.json(users);
+  } catch (err) {
+    console.error('Fetch all users error:', err);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
 
 // Ensure Prisma connectivity only
 ensurePrismaConnection();

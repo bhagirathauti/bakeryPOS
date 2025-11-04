@@ -5,9 +5,9 @@ import Features from './components/Features'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
 import Login from './pages/Login'
-import ShopOwnerDashboard from './components/ShopOwnerDashboard'
-import CashierDashboard from './components/CashierDashboard'
-import AdminDashboard from './components/AdminDashboard'
+import ShopOwnerDashboard from './pages/dashboards/ShopOwnerDashboard'
+import CashierDashboard from './pages/dashboards/CashierDashboard'
+import AdminDashboard from './pages/dashboards/AdminDashboard'
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
@@ -84,52 +84,77 @@ export default function App() {
       { key: 'sales', label: 'Sales' },
       { key: 'cashiers', label: 'Cashiers' },
       { key: 'products', label: 'Products' },
-      { key: 'landing', label: 'Shop Landing Page' }
+      { key: 'landing', label: 'Shop Landing Page' },
+      { key: 'orders', label: 'Orders' }
+
     ]
   };
 
-  function renderTabs(role) {
-    const tabs = dashboardTabs[role] || [];
-    return (
-      <div className="flex gap-2 mb-8">
-        {tabs.map(tab => (
-          <button
-            key={tab.key}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === tab.key ? 'bg-amber-500 text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-100'}`}
-            onClick={() => setActiveTab(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-    );
-  }
+  const dashboardTitles = {
+    admin: 'Admin Dashboard',
+    cashier: 'Cashier Dashboard',
+    shop_owner: 'Shop Owner Dashboard'
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-amber-50 to-amber-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-200">
       {/* Only show header for public pages */}
       {!user && <Header theme={theme} toggleTheme={toggleTheme} user={user} onLogout={handleLogout} onGetStarted={() => setShowAuth(true)} />}
 
-      {/* Floating theme toggle and logout for dashboards */}
+      {/* Dashboard Navbar */}
       {user && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
-          <button
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            className="inline-flex items-center px-3 py-2 border rounded-md bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-100 border-gray-200 dark:border-slate-700 shadow"
-          >
-            {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
-          </button>
-          <button
-            onClick={handleLogout}
-            className="inline-flex items-center px-3 py-2 bg-amber-500 text-white rounded-md shadow"
-          >
-            Logout
-          </button>
-        </div>
+        <nav className="bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 sticky top-0 z-50 shadow-sm">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex items-center justify-between h-16">
+              {/* Dashboard Title */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-lg shadow-amber-500/30">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">{dashboardTitles[user.role]}</h1>
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-2">
+                {dashboardTabs[user.role]?.map(tab => (
+                  <button
+                    key={tab.key}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                      activeTab === tab.key 
+                        ? 'bg-amber-500 text-white shadow-md' 
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+                    }`}
+                    onClick={() => setActiveTab(tab.key)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Theme Toggle and Logout */}
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={toggleTheme}
+                  aria-label="Toggle theme"
+                  className="p-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  {theme === 'dark' ? '🌙' : '☀️'}
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-medium rounded-lg shadow-md transition-all"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        </nav>
       )}
 
-      <main className="max-w-6xl mx-auto px-6 py-12">
+      <main className={user ? '' : 'max-w-6xl mx-auto px-6 py-12'}>
         {!user ? (
           <>
             {!showAuth && <Hero />}
@@ -138,7 +163,6 @@ export default function App() {
           </>
         ) : (
           <>
-            {renderTabs(user.role)}
             {user.role === 'admin' ? (
               <AdminDashboard user={user} activeTab={activeTab} />
             ) : user.role === 'cashier' ? (

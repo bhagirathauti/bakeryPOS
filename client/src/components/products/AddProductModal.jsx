@@ -6,6 +6,7 @@ export default function AddProductModal({ open, onClose, onAdd, initial }) {
   const [discount, setDiscount] = useState(initial?.discount || '');
   const [cgst, setCgst] = useState(initial?.cgst || '');
   const [sgst, setSgst] = useState(initial?.sgst || '');
+  const [stock, setStock] = useState(initial?.stock || '');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
@@ -14,13 +15,13 @@ export default function AddProductModal({ open, onClose, onAdd, initial }) {
     e.preventDefault();
     setError('');
     setSuccess('');
-    if (!productName || !price) {
-      setError('Product name and price are required.');
+    if (!productName || !price || !stock) {
+      setError('Product name, price, and stock quantity are required.');
       return;
     }
     setLoading(true);
     try {
-      await onAdd({ productName, price, discount, cgst, sgst });
+      await onAdd({ productName, price, discount, cgst, sgst, stock: parseInt(stock) });
       setSuccess(initial ? 'Product updated successfully!' : 'Product added successfully!');
       setTimeout(() => {
         setSuccess('');
@@ -47,6 +48,10 @@ export default function AddProductModal({ open, onClose, onAdd, initial }) {
           <div>
             <label className="block text-sm">Price</label>
             <input type="number" value={price} onChange={e => setPrice(e.target.value)} className="mt-1 block w-full rounded-md border px-3 py-2" />
+          </div>
+          <div>
+            <label className="block text-sm">Stock Quantity</label>
+            <input type="number" value={stock} onChange={e => setStock(e.target.value)} min="0" className="mt-1 block w-full rounded-md border px-3 py-2" required />
           </div>
           <div>
             <label className="block text-sm">Discount (%)</label>
