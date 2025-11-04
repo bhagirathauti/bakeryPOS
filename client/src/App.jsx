@@ -4,6 +4,7 @@ import Hero from './components/Hero'
 import Features from './components/Features'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import ShopOwnerDashboard from './pages/dashboards/ShopOwnerDashboard'
 import CashierDashboard from './pages/dashboards/CashierDashboard'
@@ -90,6 +91,48 @@ export default function App() {
     ]
   };
 
+  function renderTabs(role) {
+    const tabs = dashboardTabs[role] || [];
+    return (
+      <div className="flex gap-2 mb-8">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === tab.key ? 'bg-amber-500 text-white' : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-gray-100'}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-white via-amber-50 to-amber-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+      {/* Only show header for public pages */}
+      {/* Show global header only when not rendering full-page Landing/Login */}
+      {!user && showAuth && (
+        <Header theme={theme} toggleTheme={toggleTheme} user={user} onLogout={handleLogout} onGetStarted={() => setShowAuth(true)} />
+      )}
+
+      {/* Floating theme toggle and logout for dashboards */}
+      {user && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3">
+          <button
+            onClick={toggleTheme}
+            aria-label="Toggle theme"
+            className="inline-flex items-center px-3 py-2 border rounded-md bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-100 border-gray-200 dark:border-slate-700 shadow"
+          >
+            {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+          </button>
+          <button
+            onClick={handleLogout}
+            className="inline-flex items-center px-3 py-2 bg-amber-500 text-white rounded-md shadow"
+          >
+            Logout
+          </button>
+        </div>
   const dashboardTitles = {
     admin: 'Admin Dashboard',
     cashier: 'Cashier Dashboard',
@@ -154,6 +197,29 @@ export default function App() {
         </nav>
       )}
 
+      {!user && showAuth ? (
+        <Login onAuth={handleAuth} />
+      ) : (
+        <>
+          {!user ? (
+            // Full-page Landing when logged out and not showing auth
+            <Landing theme={theme} toggleTheme={toggleTheme} onGetStarted={() => setShowAuth(true)} />
+          ) : (
+            <>
+              <main className="max-w-6xl mx-auto px-6 py-12">
+                {renderTabs(user.role)}
+                {user.role === 'admin' ? (
+                  <AdminDashboard user={user} activeTab={activeTab} />
+                ) : user.role === 'cashier' ? (
+                  <CashierDashboard user={user} activeTab={activeTab} />
+                ) : (
+                  <ShopOwnerDashboard user={user} activeTab={activeTab} />
+                )}
+              </main>
+            </>
+          )}
+        </>
+      )}
       <main className={user ? '' : 'max-w-6xl mx-auto px-6 py-12'}>
         {!user ? (
           <>
