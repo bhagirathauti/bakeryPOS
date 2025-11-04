@@ -4,6 +4,7 @@ import Hero from './components/Hero'
 import Features from './components/Features'
 import Contact from './components/Contact'
 import Footer from './components/Footer'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import ShopOwnerDashboard from './components/ShopOwnerDashboard'
 import CashierDashboard from './components/CashierDashboard'
@@ -108,7 +109,10 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white via-amber-50 to-amber-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
       {/* Only show header for public pages */}
-      {!user && <Header theme={theme} toggleTheme={toggleTheme} user={user} onLogout={handleLogout} onGetStarted={() => setShowAuth(true)} />}
+      {/* Show global header only when not rendering full-page Landing/Login */}
+      {!user && showAuth && (
+        <Header theme={theme} toggleTheme={toggleTheme} user={user} onLogout={handleLogout} onGetStarted={() => setShowAuth(true)} />
+      )}
 
       {/* Floating theme toggle and logout for dashboards */}
       {user && (
@@ -118,7 +122,7 @@ export default function App() {
             aria-label="Toggle theme"
             className="inline-flex items-center px-3 py-2 border rounded-md bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-100 border-gray-200 dark:border-slate-700 shadow"
           >
-            {theme === 'dark' ? '🌙 Dark' : '☀️ Light'}
+            {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
           </button>
           <button
             onClick={handleLogout}
@@ -129,28 +133,29 @@ export default function App() {
         </div>
       )}
 
-      <main className="max-w-6xl mx-auto px-6 py-12">
-        {!user ? (
-          <>
-            {!showAuth && <Hero />}
-            {!showAuth && <Features />}
-            {showAuth ? <Login onAuth={handleAuth} /> : <Contact />}
-          </>
-        ) : (
-          <>
-            {renderTabs(user.role)}
-            {user.role === 'admin' ? (
-              <AdminDashboard user={user} activeTab={activeTab} />
-            ) : user.role === 'cashier' ? (
-              <CashierDashboard user={user} activeTab={activeTab} />
-            ) : (
-              <ShopOwnerDashboard user={user} activeTab={activeTab} />
-            )}
-          </>
-        )}
-      </main>
-
-      {!user && <Footer />}
+      {!user && showAuth ? (
+        <Login onAuth={handleAuth} />
+      ) : (
+        <>
+          {!user ? (
+            // Full-page Landing when logged out and not showing auth
+            <Landing theme={theme} toggleTheme={toggleTheme} onGetStarted={() => setShowAuth(true)} />
+          ) : (
+            <>
+              <main className="max-w-6xl mx-auto px-6 py-12">
+                {renderTabs(user.role)}
+                {user.role === 'admin' ? (
+                  <AdminDashboard user={user} activeTab={activeTab} />
+                ) : user.role === 'cashier' ? (
+                  <CashierDashboard user={user} activeTab={activeTab} />
+                ) : (
+                  <ShopOwnerDashboard user={user} activeTab={activeTab} />
+                )}
+              </main>
+            </>
+          )}
+        </>
+      )}
     </div>
   )
 }
