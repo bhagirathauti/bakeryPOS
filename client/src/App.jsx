@@ -91,6 +91,12 @@ export default function App() {
     ]
   };
 
+  const dashboardTitles = {
+    admin: 'Admin Dashboard',
+    cashier: 'Cashier Dashboard',
+    shop_owner: 'Shop Owner Dashboard'
+  };
+
   function renderTabs(role) {
     const tabs = dashboardTabs[role] || [];
     return (
@@ -133,16 +139,7 @@ export default function App() {
             Logout
           </button>
         </div>
-  const dashboardTitles = {
-    admin: 'Admin Dashboard',
-    cashier: 'Cashier Dashboard',
-    shop_owner: 'Shop Owner Dashboard'
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 transition-colors duration-200">
-      {/* Only show header for public pages */}
-      {!user && <Header theme={theme} toggleTheme={toggleTheme} user={user} onLogout={handleLogout} onGetStarted={() => setShowAuth(true)} />}
+      )}
 
       {/* Dashboard Navbar */}
       {user && (
@@ -197,6 +194,7 @@ export default function App() {
         </nav>
       )}
 
+      {/* Main Content */}
       {!user && showAuth ? (
         <Login onAuth={handleAuth} />
       ) : (
@@ -206,39 +204,17 @@ export default function App() {
             <Landing theme={theme} toggleTheme={toggleTheme} onGetStarted={() => setShowAuth(true)} />
           ) : (
             <>
-              <main className="max-w-6xl mx-auto px-6 py-12">
-                {renderTabs(user.role)}
-                {user.role === 'admin' ? (
-                  <AdminDashboard user={user} activeTab={activeTab} />
-                ) : user.role === 'cashier' ? (
-                  <CashierDashboard user={user} activeTab={activeTab} />
-                ) : (
-                  <ShopOwnerDashboard user={user} activeTab={activeTab} />
-                )}
-              </main>
+              {user.role === 'admin' ? (
+                <AdminDashboard user={user} activeTab={activeTab} />
+              ) : user.role === 'cashier' ? (
+                <CashierDashboard user={user} activeTab={activeTab} />
+              ) : (
+                <ShopOwnerDashboard user={user} activeTab={activeTab} />
+              )}
             </>
           )}
         </>
       )}
-      <main className={user ? '' : 'max-w-6xl mx-auto px-6 py-12'}>
-        {!user ? (
-          <>
-            {!showAuth && <Hero />}
-            {!showAuth && <Features />}
-            {showAuth ? <Login onAuth={handleAuth} /> : <Contact />}
-          </>
-        ) : (
-          <>
-            {user.role === 'admin' ? (
-              <AdminDashboard user={user} activeTab={activeTab} />
-            ) : user.role === 'cashier' ? (
-              <CashierDashboard user={user} activeTab={activeTab} />
-            ) : (
-              <ShopOwnerDashboard user={user} activeTab={activeTab} />
-            )}
-          </>
-        )}
-      </main>
 
       {!user && <Footer />}
     </div>
