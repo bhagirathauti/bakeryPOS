@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { computeOrderTotals, computeItemBasePrice } from '../../utils/orderCalculations'
 
 export default function NewOrderModal({ open, onClose, products, onComplete, cashierId, shopId }) {
   const [step, setStep] = useState(1);
@@ -56,23 +57,10 @@ export default function NewOrderModal({ open, onClose, products, onComplete, cas
   }
 
   function calculateTotals() {
-    let subtotal = 0;
-    let totalDiscount = 0;
-    let totalTax = 0;
-
-    cart.forEach(item => {
-      const itemPrice = item.price * item.quantity;
-      const discountAmount = (itemPrice * item.discount) / 100;
-      const afterDiscount = itemPrice - discountAmount;
-      const cgst = (afterDiscount * item.cgst) / 100;
-      const sgst = (afterDiscount * item.sgst) / 100;
-
-      subtotal += itemPrice;
-      totalDiscount += discountAmount;
-      totalTax += cgst + sgst;
-    });
-
-    const total = subtotal - totalDiscount + totalTax;
+    const { subtotal, totalDiscount, totalTax, total } = (() => {
+      const t = computeOrderTotals(cart || []);
+      return { subtotal: t.subtotal, totalDiscount: t.totalDiscount, totalTax: t.totalTax ?? t.totalTax, total: t.total };
+    })();
 
     return { subtotal, totalDiscount, totalTax, total };
   }
@@ -149,8 +137,8 @@ export default function NewOrderModal({ open, onClose, products, onComplete, cas
   const totals = calculateTotals();
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-700">
+    <div className="fixed top-0 left-0 right-0 bottom-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm m-0 p-0">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-gray-200 dark:border-slate-700 mx-4">
         {/* Header */}
         <div className="px-6 py-5 border-b border-gray-200 dark:border-slate-700 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-slate-700 dark:to-slate-700">
           <div className="flex items-center justify-between">
@@ -348,25 +336,38 @@ export default function NewOrderModal({ open, onClose, products, onComplete, cas
                 {/* Order Items */}
                 <div className="space-y-2 mb-4">
                   {cart.map(item => {
-                    const itemPrice = item.price * item.quantity;
-                    const discountAmount = (itemPrice * item.discount) / 100;
-                    const afterDiscount = itemPrice - discountAmount;
-                    const cgst = (afterDiscount * item.cgst) / 100;
-                    const sgst = (afterDiscount * item.sgst) / 100;
-                    const itemTotal = afterDiscount + cgst + sgst;
+                    // MRP includes GST, so extract base price first (use shared helper)
+                    const basePrice = computeItemBasePrice(item);
+                    const basePriceTotal = basePrice * item.quantity;
+
+                    // Apply discount on base price
+                    const discountAmount = (basePriceTotal * (item.discount || 0)) / 100;
+                    const afterDiscount = basePriceTotal - discountAmount;
+
+                    // Calculate GST on discounted base price
+                    const cgst = (afterDiscount * (item.cgst || 0)) / 100;
+                    const sgst = (afterDiscount * (item.sgst || 0)) / 100;
+                    const taxAmount = cgst + sgst;
+                    
+                    const itemTotal = afterDiscount + taxAmount;
 
                     return (
                       <div key={item.id} className="flex justify-between items-start p-3 border border-gray-200 dark:border-slate-700 rounded-lg">
                         <div>
                           <p className="font-medium text-gray-900 dark:text-white">{item.productName}</p>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
-                            ₹{item.price} × {item.quantity} = ₹{itemPrice.toFixed(2)}
+                            MRP: ₹{item.price.toFixed(2)} × {item.quantity}
+                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-500">
+                            Base Price: ₹{basePriceTotal.toFixed(2)}
                           </p>
                           {item.discount > 0 && (
                             <p className="text-xs text-red-600 dark:text-red-400">-₹{discountAmount.toFixed(2)} ({item.discount}% off)</p>
                           )}
                           {(item.cgst > 0 || item.sgst > 0) && (
-                            <p className="text-xs text-blue-600 dark:text-blue-400">+₹{(cgst + sgst).toFixed(2)} (Tax)</p>
+                            <p className="text-xs text-blue-600 dark:text-blue-400">
+                              +₹{taxAmount.toFixed(2)} (CGST {item.cgst}% + SGST {item.sgst}%)
+                            </p>
                           )}
                         </div>
                         <p className="font-bold text-amber-600">₹{itemTotal.toFixed(2)}</p>

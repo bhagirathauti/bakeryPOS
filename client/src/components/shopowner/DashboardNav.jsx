@@ -5,6 +5,7 @@ export default function DashboardNav({ current, setCurrent, locked }) {
     { key: 'profile', label: 'Shop Profile' },
     { key: 'products', label: 'Products' },
     { key: 'orders', label: 'Orders' },
+    { key: 'customers', label: 'Customers' },
     { key: 'cashiers', label: 'Cashiers' },
     { key: 'sales', label: 'Sales' },
     { key: 'landing', label: 'Shop Landing Page' },

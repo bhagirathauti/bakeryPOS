@@ -2,9 +2,13 @@ import React, { useState, useEffect } from 'react'
 import CashierProfile from '../../components/cashier/CashierProfile'
 import NewOrderModal from '../../components/cashier/NewOrderModal'
 import axios from '../../utils/axios'
+import jsPDF from 'jspdf'
+import OrderDetailsModal from '../../components/OrderDetailsModal'
+import { computeOrderTotals } from '../../utils/orderCalculations'
 
 export default function CashierDashboard({ user, activeTab }) {
   const [profile, setProfile] = useState(null);
+  const [shopProfile, setShopProfile] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
@@ -15,12 +19,18 @@ export default function CashierDashboard({ user, activeTab }) {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterPayment, setFilterPayment] = useState('all');
   const [filterDate, setFilterDate] = useState('all');
-  const [expandedOrder, setExpandedOrder] = useState(null);
-  const ordersPerPage = 10;
+  const [viewOrderModal, setViewOrderModal] = useState(null);
+  const [ordersPerPage, setOrdersPerPage] = useState(10);
 
   useEffect(() => {
     fetchProfile();
   }, [user]);
+
+  useEffect(() => {
+    if (user.shopId) {
+      fetchShopProfile();
+    }
+  }, [user.shopId]);
 
   useEffect(() => {
     if (profile && user.shopId && activeTab === 'checkout') {
@@ -43,6 +53,18 @@ export default function CashierDashboard({ user, activeTab }) {
       console.error('Fetch profile error:', err);
     } finally {
       setLoadingProfile(false);
+    }
+  }
+
+  async function fetchShopProfile() {
+    try {
+      const API_BASE = 'http://localhost:4000';
+      const { data } = await axios.get(`${API_BASE}/api/shop/profile`, {
+        params: { shopId: user.shopId }
+      });
+      setShopProfile(data);
+    } catch (err) {
+      console.error('Fetch shop profile error:', err);
     }
   }
 
@@ -71,7 +93,10 @@ export default function CashierDashboard({ user, activeTab }) {
     try {
       const API_BASE = 'http://localhost:4000';
       const { data } = await axios.get(`${API_BASE}/api/orders`, {
-        params: { shopId: user.shopId }
+        params: { 
+          shopId: user.shopId,
+          cashierId: user.id  // Filter by logged-in cashier
+        }
       });
       const today = new Date().toDateString();
       const todayOrdersList = data.filter(order => 
@@ -89,7 +114,10 @@ export default function CashierDashboard({ user, activeTab }) {
     try {
       const API_BASE = 'http://localhost:4000';
       const { data } = await axios.get(`${API_BASE}/api/orders`, {
-        params: { shopId: user.shopId }
+        params: { 
+          shopId: user.shopId,
+          cashierId: user.id  // Filter by logged-in cashier
+        }
       });
       setAllOrders(data);
     } catch (err) {
@@ -100,8 +128,199 @@ export default function CashierDashboard({ user, activeTab }) {
   }
 
   function handleOrderComplete(order) {
+    // Automatically download PDF after order completion
+    if (order && shopProfile) {
+      downloadOrderPDF(order);
+    }
     fetchTodayOrders();
     setShowOrderModal(false);
+  }
+
+  function downloadOrderPDF(order) {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPosition = 15;
+
+    // Shop Header with border
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(10, 10, pageWidth - 20, 35, 2, 2);
+
+    yPosition = 18;
+    doc.setFontSize(22);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(218, 165, 32); // Amber color
+    doc.text(shopProfile?.shopName || 'Shop Name', pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 7;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(60, 60, 60);
+    doc.text(shopProfile?.address || 'Shop Address', pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 5;
+    doc.text(`Contact: ${shopProfile?.mobile || 'N/A'}`, pageWidth / 2, yPosition, { align: 'center' });
+    
+    // Invoice Title
+    yPosition = 55;
+    doc.setFontSize(18);
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(0, 0, 0);
+    doc.text('TAX INVOICE', pageWidth / 2, yPosition, { align: 'center' });
+    
+    // Order Details Box
+    yPosition = 65;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    
+    // Left side - Customer info
+    doc.setFont(undefined, 'bold');
+    doc.text('BILL TO:', 15, yPosition);
+    doc.setFont(undefined, 'normal');
+    yPosition += 5;
+    doc.text(order.customerName, 15, yPosition);
+    yPosition += 4;
+    doc.text(`Mobile: ${order.customerMobile}`, 15, yPosition);
+    
+    // Right side - Invoice info
+    yPosition = 65;
+    doc.setFont(undefined, 'bold');
+    doc.text('Invoice #:', pageWidth - 70, yPosition);
+    doc.setFont(undefined, 'normal');
+    doc.text(order.id.toString(), pageWidth - 15, yPosition, { align: 'right' });
+    
+    yPosition += 5;
+    doc.setFont(undefined, 'bold');
+    doc.text('Date:', pageWidth - 70, yPosition);
+    doc.setFont(undefined, 'normal');
+    doc.text(new Date(order.createdAt).toLocaleDateString('en-IN'), pageWidth - 15, yPosition, { align: 'right' });
+    
+    yPosition += 5;
+    doc.setFont(undefined, 'bold');
+    doc.text('Time:', pageWidth - 70, yPosition);
+    doc.setFont(undefined, 'normal');
+    doc.text(new Date(order.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }), pageWidth - 15, yPosition, { align: 'right' });
+    
+    yPosition += 5;
+    doc.setFont(undefined, 'bold');
+    doc.text('Payment:', pageWidth - 70, yPosition);
+    doc.setFont(undefined, 'normal');
+    doc.text(order.paymentMethod.toUpperCase(), pageWidth - 15, yPosition, { align: 'right' });
+    
+    // Items Table
+    yPosition += 10;
+    doc.setDrawColor(0, 0, 0);
+    doc.setFillColor(240, 240, 240);
+    doc.rect(10, yPosition - 5, pageWidth - 20, 8, 'FD');
+    
+    doc.setFont(undefined, 'bold');
+    doc.setFontSize(9);
+    doc.text('ITEM', 12, yPosition);
+    doc.text('QTY', 90, yPosition, { align: 'center' });
+    doc.text('RATE', 110, yPosition, { align: 'center' });
+    doc.text('DISC%', 130, yPosition, { align: 'center' });
+    doc.text('CGST%', 150, yPosition, { align: 'center' });
+    doc.text('SGST%', 170, yPosition, { align: 'center' });
+    doc.text('AMOUNT', pageWidth - 12, yPosition, { align: 'right' });
+    
+    yPosition += 5;
+    doc.setLineWidth(0.3);
+    doc.line(10, yPosition, pageWidth - 10, yPosition);
+    
+    // Items
+    yPosition += 5;
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(8);
+    
+    order.orderItems.forEach((item, index) => {
+      // Check if we need a new page
+      if (yPosition > 260) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      // Alternate row background
+      if (index % 2 === 0) {
+        doc.setFillColor(250, 250, 250);
+        doc.rect(10, yPosition - 4, pageWidth - 20, 6, 'F');
+      }
+      
+      doc.text(item.productName.substring(0, 30), 12, yPosition);
+      doc.text(item.quantity.toString(), 90, yPosition, { align: 'center' });
+      doc.text(`Rs.${item.price.toFixed(2)}`, 110, yPosition, { align: 'center' });
+      doc.text(item.discount > 0 ? `${item.discount.toFixed(1)}%` : '-', 130, yPosition, { align: 'center' });
+      doc.text(`${item.cgst.toFixed(1)}%`, 150, yPosition, { align: 'center' });
+      doc.text(`${item.sgst.toFixed(1)}%`, 170, yPosition, { align: 'center' });
+      doc.text(`Rs.${item.total.toFixed(2)}`, pageWidth - 12, yPosition, { align: 'right' });
+      yPosition += 6;
+    });
+    
+    // Bottom line
+    yPosition += 2;
+    doc.setLineWidth(0.5);
+    doc.line(10, yPosition, pageWidth - 10, yPosition);
+    
+    // Summary Section
+    yPosition += 8;
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'normal');
+    
+    // Calculate totals using shared helper
+    const { subtotal: computedSubtotal, totalDiscount, cgst: totalCGST, sgst: totalSGST, totalTax } = computeOrderTotals(order.orderItems || []);
+    
+    // Right aligned summary
+    const summaryX = 130;
+    
+  doc.text('Subtotal:', summaryX, yPosition);
+  const subtotalToShow = (order.subtotal != null) ? order.subtotal : computedSubtotal;
+  doc.text(`Rs.${subtotalToShow.toFixed(2)}`, pageWidth - 12, yPosition, { align: 'right' });
+    
+    if (totalDiscount > 0) {
+      yPosition += 5;
+      doc.setTextColor(34, 139, 34); // Green for discount
+      doc.text('Total Discount:', summaryX, yPosition);
+      doc.text(`-Rs.${totalDiscount.toFixed(2)}`, pageWidth - 12, yPosition, { align: 'right' });
+      doc.setTextColor(0, 0, 0);
+    }
+    
+  yPosition += 5;
+  doc.text('CGST:', summaryX, yPosition);
+  doc.text(`Rs.${totalCGST.toFixed(2)}`, pageWidth - 12, yPosition, { align: 'right' });
+
+  yPosition += 5;
+  doc.text('SGST:', summaryX, yPosition);
+  doc.text(`Rs.${totalSGST.toFixed(2)}`, pageWidth - 12, yPosition, { align: 'right' });
+
+  yPosition += 5;
+  doc.setFont(undefined, 'bold');
+  doc.text('Total Tax:', summaryX, yPosition);
+  const taxToShow = (order.tax != null) ? order.tax : totalTax;
+  doc.text(`Rs.${taxToShow.toFixed(2)}`, pageWidth - 12, yPosition, { align: 'right' });
+    
+    // Total with background
+    yPosition += 7;
+    doc.setFillColor(218, 165, 32); // Amber
+    doc.roundedRect(summaryX - 5, yPosition - 5, pageWidth - summaryX - 7, 10, 2, 2, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text('GRAND TOTAL:', summaryX, yPosition + 2);
+    doc.text(`Rs.${order.total.toFixed(2)}`, pageWidth - 12, yPosition + 2, { align: 'right' });
+    
+    // Footer
+    yPosition += 15;
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'italic');
+    doc.text('Thank you for your business!', pageWidth / 2, yPosition, { align: 'center' });
+    
+    yPosition += 4;
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(7);
+    doc.text('This is a computer generated invoice and does not require signature', pageWidth / 2, yPosition, { align: 'center' });
+    
+    // Save PDF
+    doc.save(`Invoice_${order.id}_${order.customerName.replace(/\s+/g, '_')}.pdf`);
   }
 
   function calculateTodayStats() {
@@ -179,9 +398,10 @@ export default function CashierDashboard({ user, activeTab }) {
         const stats = calculateTodayStats();
         
         return (
-          <div className="space-y-6">
-            {/* Cashier & Shop Info Card */}
-            <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl p-6 shadow-lg">
+          <>
+            <div className="space-y-6">
+              {/* Cashier & Shop Info Card */}
+              <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-full overflow-hidden border-3 border-white/30 bg-white/20 flex items-center justify-center">
@@ -274,8 +494,9 @@ export default function CashierDashboard({ user, activeTab }) {
                 </div>
               </div>
             )}
+            </div>
 
-            {/* Order Modal */}
+            {/* Order Modal - Outside space-y container */}
             <NewOrderModal
               open={showOrderModal}
               onClose={() => setShowOrderModal(false)}
@@ -284,7 +505,7 @@ export default function CashierDashboard({ user, activeTab }) {
               cashierId={user.id}
               shopId={user.shopId}
             />
-          </div>
+          </>
         );
       case 'checkout':
         return (
@@ -515,7 +736,7 @@ export default function CashierDashboard({ user, activeTab }) {
               </div>
 
               {/* Filters */}
-              <div className="mt-4 flex flex-wrap gap-3">
+              <div className="mt-4 flex flex-wrap gap-3 items-end">
                 <div>
                   <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Date Range</label>
                   <select
@@ -542,6 +763,19 @@ export default function CashierDashboard({ user, activeTab }) {
                     <option value="upi">UPI</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Orders Per Page</label>
+                  <select
+                    value={ordersPerPage}
+                    onChange={(e) => { setOrdersPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                    className="px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={20}>20</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -564,107 +798,68 @@ export default function CashierDashboard({ user, activeTab }) {
                 </div>
               ) : (
                 <>
-                  <div className="space-y-3">
-                    {paginatedOrders.map(order => (
-                      <div key={order.id} className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
-                        {/* Collapsed View */}
-                        <div 
-                          className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-slate-700/50"
-                          onClick={() => setExpandedOrder(expandedOrder === order.id ? null : order.id)}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-3">
-                                <h4 className="font-semibold text-gray-900 dark:text-white">{order.customerName}</h4>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  Order #{order.id}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-4 mt-1">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  📞 {order.customerMobile}
-                                </p>
-                                <p className="text-xs text-gray-500 dark:text-gray-500">
-                                  {new Date(order.createdAt).toLocaleDateString()} {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </p>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  {order.orderItems.length} {order.orderItems.length === 1 ? 'item' : 'items'}
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <div className="text-right">
-                                <p className="text-xl font-bold text-amber-600">₹{order.total.toFixed(2)}</p>
-                                <span className="inline-block px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 text-xs font-medium rounded capitalize">
-                                  {order.paymentMethod}
-                                </span>
-                              </div>
-                              <svg 
-                                className={`w-5 h-5 text-gray-400 transition-transform ${expandedOrder === order.id ? 'rotate-180' : ''}`}
-                                fill="none" 
-                                stroke="currentColor" 
-                                viewBox="0 0 24 24"
+                  {/* Orders Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-600">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Order ID</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Customer</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Date & Time</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Items</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Payment</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Total</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">Details</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+                        {paginatedOrders.map(order => (
+                          <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors">
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">#{order.id}</span>
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">{order.customerName}</div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">{order.customerMobile}</div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900 dark:text-white">{new Date(order.createdAt).toLocaleDateString()}</div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">{new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className="text-sm text-gray-900 dark:text-white">{order.orderItems.length} {order.orderItems.length === 1 ? 'item' : 'items'}</span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 capitalize">
+                                {order.paymentMethod}
+                              </span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-right">
+                              <span className="text-sm font-bold text-amber-600 dark:text-amber-500">₹{order.total.toFixed(2)}</span>
+                            </td>
+                            <td className="px-4 py-4 whitespace-nowrap text-center">
+                              <button
+                                onClick={() => setViewOrderModal(order)}
+                                className="inline-flex items-center p-2 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-600 dark:text-blue-400 transition-colors"
+                                title="View Details"
                               >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Expanded View */}
-                        {expandedOrder === order.id && (
-                          <div className="px-4 pb-4 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
-                            {/* Order Items */}
-                            <div className="mt-4">
-                              <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Order Items:</h5>
-                              <div className="space-y-2">
-                                {order.orderItems.map(item => (
-                                  <div key={item.id} className="flex justify-between items-center text-sm bg-white dark:bg-slate-800 p-2 rounded">
-                                    <div className="flex-1">
-                                      <span className="text-gray-900 dark:text-white font-medium">{item.productName}</span>
-                                      <span className="text-gray-500 dark:text-gray-400 ml-2">× {item.quantity}</span>
-                                      <span className="text-gray-400 dark:text-gray-500 text-xs ml-2">@ ₹{item.price.toFixed(2)}</span>
-                                    </div>
-                                    <span className="text-gray-700 dark:text-gray-300 font-medium">₹{item.total.toFixed(2)}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {/* Order Summary */}
-                            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-slate-700">
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                                  <span>Subtotal:</span>
-                                  <span>₹{order.subtotal.toFixed(2)}</span>
-                                </div>
-                                {order.discount > 0 && (
-                                  <div className="flex justify-between text-green-600 dark:text-green-400">
-                                    <span>Discount:</span>
-                                    <span>-₹{order.discount.toFixed(2)}</span>
-                                  </div>
-                                )}
-                                <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                                  <span>Tax (CGST + SGST):</span>
-                                  <span>₹{order.tax.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between font-bold text-gray-900 dark:text-white text-base pt-2 border-t border-gray-200 dark:border-slate-700">
-                                  <span>Total:</span>
-                                  <span>₹{order.total.toFixed(2)}</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
 
                   {/* Pagination */}
                   {totalPages > 1 && (
-                    <div className="mt-6 flex justify-between items-center">
+                    <div className="mt-6 flex justify-between items-center px-4">
                       <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Page {currentPage} of {totalPages}
+                        Showing {((currentPage - 1) * ordersPerPage) + 1} to {Math.min(currentPage * ordersPerPage, filteredCount)} of {filteredCount} orders
                       </div>
                       <div className="flex gap-2">
                         <button
@@ -674,6 +869,9 @@ export default function CashierDashboard({ user, activeTab }) {
                         >
                           Previous
                         </button>
+                        <span className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">
+                          Page {currentPage} of {totalPages}
+                        </span>
                         <button
                           onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                           disabled={currentPage === totalPages}
@@ -699,6 +897,8 @@ export default function CashierDashboard({ user, activeTab }) {
       <div className="max-w-7xl mx-auto px-6 py-8">
         {renderTabContent()}
       </div>
+
+      <OrderDetailsModal order={viewOrderModal} onClose={() => setViewOrderModal(null)} onDownload={downloadOrderPDF} />
     </div>
   )
 }

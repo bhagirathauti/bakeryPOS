@@ -63,12 +63,13 @@ async function ensurePrismaConnection() {
 const auth = require('./auth')
 const shop = require('./shop')
 const product = require('./product')
+const inventory = require('./inventory')
 // Product endpoints
 app.post('/api/products', async (req, res) => {
-  const { shopId, productName, price, discount, cgst, sgst } = req.body;
+  const { shopId, productName, price, discount, cgst, sgst, stock } = req.body;
   if (!shopId || !productName || !price) return res.status(400).json({ error: 'shopId, productName, price required' });
   try {
-    const p = await product.addProduct(shopId, { productName, price, discount, cgst, sgst });
+    const p = await product.addProduct(shopId, { productName, price, discount, cgst, sgst, stock });
     res.json(p);
   } catch (err) {
     console.error('Add product error:', err);
@@ -96,6 +97,57 @@ app.put('/api/products/:id', async (req, res) => {
     res.json(updated);
   } catch (err) {
     console.error('Update product error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// Atomic inventory increment endpoint
+app.post('/api/products/:id/inventory', async (req, res) => {
+  const productId = req.params.id;
+  const { delta, reason } = req.body;
+  // Try to get user id from authenticated request (req.user) if available, otherwise accept optional userId in body.
+  const userIdFromBody = req.body.userId;
+  const userIdFromReq = req.user && req.user.id ? req.user.id : null;
+  const userId = userIdFromReq || userIdFromBody || null;
+
+  if (!delta && delta !== 0) return res.status(400).json({ error: 'delta_required' });
+
+  // Validate reason if provided
+  const allowedReasons = [
+    'manual_adjustment',
+    'supplier_receipt',
+    'production',
+    'stock_correction',
+    'return',
+    'damage',
+    'other'
+  ];
+
+  if (reason && !allowedReasons.includes(reason)) {
+    return res.status(400).json({ 
+      error: 'invalid_reason', 
+      message: `Reason must be one of: ${allowedReasons.join(', ')}` 
+    });
+  }
+
+  try {
+    const result = await inventory.addInventory(productId, { delta, reason, userId });
+    res.json({ success: true, product: result.updatedProduct, log: result.log });
+  } catch (err) {
+    if (err && err.message === 'invalid_delta') return res.status(400).json({ error: 'invalid_delta' });
+    console.error('Inventory update error:', err);
+    res.status(500).json({ error: 'server_error' });
+  }
+});
+
+// Get inventory history for product (used by client InventoryModal)
+app.get('/api/products/:id/inventory', async (req, res) => {
+  const productId = req.params.id;
+  try {
+    const history = await inventory.getInventoryHistory(productId, { limit: 1000 });
+    res.json(history);
+  } catch (err) {
+    console.error('Fetch inventory history error:', err);
     res.status(500).json({ error: 'server_error' });
   }
 });
@@ -288,22 +340,34 @@ app.post('/api/orders', async (req, res) => {
     let totalTax = 0;
 
     const orderItemsData = items.map(item => {
-      const itemPrice = item.price * item.quantity;
-      const discountAmount = (itemPrice * item.discount) / 100;
-      const afterDiscount = itemPrice - discountAmount;
+      // MRP already includes GST, so we need to extract the base price
+      const totalGstPercent = item.cgst + item.sgst;
+      const basePrice = item.price / (1 + (totalGstPercent / 100));
+      
+      // Calculate for the quantity
+      const basePriceTotal = basePrice * item.quantity;
+      
+      // Apply discount on base price
+      const discountAmount = (basePriceTotal * item.discount) / 100;
+      const afterDiscount = basePriceTotal - discountAmount;
+      
+      // Calculate GST on discounted base price
       const cgstAmount = (afterDiscount * item.cgst) / 100;
       const sgstAmount = (afterDiscount * item.sgst) / 100;
-      const itemTotal = afterDiscount + cgstAmount + sgstAmount;
+      const taxAmount = cgstAmount + sgstAmount;
+      
+      // Final total = Base price - Discount + GST
+      const itemTotal = afterDiscount + taxAmount;
 
-      subtotal += itemPrice;
+      subtotal += basePriceTotal;
       totalDiscount += discountAmount;
-      totalTax += cgstAmount + sgstAmount;
+      totalTax += taxAmount;
 
       return {
         productId: item.id,
         productName: item.productName,
         quantity: item.quantity,
-        price: item.price,
+        price: item.price, // Store MRP
         discount: item.discount,
         cgst: item.cgst,
         sgst: item.sgst,
@@ -359,14 +423,32 @@ app.post('/api/orders', async (req, res) => {
 });
 
 app.get('/api/orders', async (req, res) => {
-  const { shopId } = req.query;
+  const { shopId, cashierId } = req.query;
   if (!shopId) return res.status(400).json({ error: 'shopId required' });
 
   try {
+    const whereClause = { shopId: Number(shopId) };
+    
+    // If cashierId is provided, filter by that cashier
+    if (cashierId) {
+      whereClause.cashierId = Number(cashierId);
+    }
+
     const orders = await prisma.order.findMany({
-      where: { shopId: Number(shopId) },
+      where: whereClause,
       include: {
-        orderItems: true
+        orderItems: true,
+        cashier: {
+          select: {
+            id: true,
+            email: true,
+            CashierProfile: {
+              select: {
+                cashierName: true
+              }
+            }
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc'
@@ -381,20 +463,34 @@ app.get('/api/orders', async (req, res) => {
 
 // Shop profile endpoints (using shop module)
 app.get('/api/shop/profile', async (req, res) => {
-  const userId = req.query.userId
-  if (!userId) return res.status(400).json({ error: 'userId required' })
+  const { userId, shopId } = req.query;
+  
+  // Support both userId and shopId queries
+  if (!userId && !shopId) {
+    return res.status(400).json({ error: 'userId or shopId required' });
+  }
+  
   try {
-    const s = await shop.getShopByUserId(userId)
-    res.json(s || null)
+    let s;
+    if (shopId) {
+      // Query by shopId directly
+      s = await prisma.shop.findUnique({
+        where: { id: Number(shopId) }
+      });
+    } else {
+      // Original userId query
+      s = await shop.getShopByUserId(userId);
+    }
+    res.json(s || null);
   } catch (err) {
     if (err && err.code === 'P2021') {
-      console.error('Prisma model/table missing during get shop profile:', err)
-      return res.status(500).json({ error: 'database_not_migrated', message: 'Run `npx prisma db push` or `npx prisma migrate dev` to create tables.' })
+      console.error('Prisma model/table missing during get shop profile:', err);
+      return res.status(500).json({ error: 'database_not_migrated', message: 'Run `npx prisma db push` or `npx prisma migrate dev` to create tables.' });
     }
-    console.error(err)
-    res.status(500).json({ error: 'server_error' })
+    console.error(err);
+    res.status(500).json({ error: 'server_error' });
   }
-})
+});
 
 app.post('/api/shop/profile', async (req, res) => {
   const { userId, shopName, mobile, address, ownerName, profilePic } = req.body

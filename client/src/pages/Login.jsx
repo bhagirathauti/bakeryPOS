@@ -1,7 +1,7 @@
 // Moved from LoginSignup.jsx
 import React, { useState } from 'react'
 
-export default function Login({ onAuth }) {
+export default function Login({ onAuth, onBackToLanding }) {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -33,6 +33,21 @@ export default function Login({ onAuth }) {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* Back to Landing Button - Fixed Position */}
+      {onBackToLanding && (
+        <div className="absolute top-4 left-4 z-10">
+          <button
+            onClick={onBackToLanding}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 font-medium shadow-sm hover:shadow-md transition-all"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            <span className="hidden sm:inline">Back to Home</span>
+          </button>
+        </div>
+      )}
+
       {/* Main Content Area */}
       <div className="flex-1 flex items-center justify-center px-4 py-8 sm:py-12 md:py-16 lg:py-20">
         <div className="w-full max-w-md">

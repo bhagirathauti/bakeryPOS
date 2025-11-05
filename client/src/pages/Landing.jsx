@@ -18,6 +18,7 @@ export default function Landing({ theme, toggleTheme, onGetStarted }) {
             </div>
             <nav className="flex items-center gap-6 sm:gap-8">
               <a className="hidden sm:inline-block text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/60" href="#features">Features</a>
+              <a className="hidden sm:inline-block text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/60" href="#pricing">Pricing</a>
               <a className="hidden sm:inline-block text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400 transition-colors px-3 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800/60" href="#contact">Contact</a>
               <div className="hidden sm:flex items-center gap-3 pl-6 ml-2 border-l border-gray-200 dark:border-slate-700">
                 <button
@@ -43,13 +44,13 @@ export default function Landing({ theme, toggleTheme, onGetStarted }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             <div className="space-y-8 max-w-2xl">
               <div className="space-y-6">
-                <span className="inline-block text-xs font-semibold uppercase tracking-wider text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full">Built for bakeries</span>
+                <span className="inline-block text-xs font-semibold uppercase tracking-wider text-amber-600 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full">Built for all businesses</span>
                 <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight tracking-tight">
                   Simplify your<br />
-                  <span className="text-amber-500">bakery sales</span>
+                  <span className="text-amber-500">business sales</span>
                 </h1>
                 <p className="text-lg sm:text-xl text-gray-600 dark:text-gray-400 leading-relaxed">
-                  Fast, modern point of sale with inventory management, WhatsApp bill sending, loyalty points and interactive sales dashboards — built for small shops and bakeries.
+                  Fast, modern point of sale with inventory management, WhatsApp bill sending, loyalty points and interactive sales dashboards — perfect for retail, restaurants, bakeries, and more.
                 </p>
               </div>
               
@@ -131,8 +132,216 @@ export default function Landing({ theme, toggleTheme, onGetStarted }) {
           </div>
         </section>
 
+        {/* Pricing */}
+        <section id="pricing" className="py-20 sm:py-28">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="max-w-3xl mx-auto mb-16 text-center space-y-4">
+              <h2 className="text-4xl sm:text-5xl font-bold tracking-tight">Simple, transparent pricing</h2>
+              <p className="text-lg text-gray-600 dark:text-gray-400">Choose the plan that fits your business size and needs.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {/* Monthly Plan */}
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl border-2 border-gray-200 dark:border-slate-700 transition-all duration-300 hover:-translate-y-2">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold">Monthly</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Perfect for getting started</p>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold text-amber-600">₹499</span>
+                      <span className="text-gray-500 dark:text-gray-400">/month</span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">Billed monthly</p>
+                  </div>
+
+                  <button onClick={onGetStarted} className="w-full px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-all">
+                    Start Monthly Plan
+                  </button>
+
+                  <div className="pt-6 space-y-4 border-t border-gray-200 dark:border-slate-700">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Single location</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Up to 5 cashiers</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Inventory management</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Sales analytics</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">WhatsApp billing</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Email support</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Yearly Plan - Popular */}
+              <div className="group bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-8 shadow-xl hover:shadow-2xl border-2 border-amber-400 dark:border-amber-500 transition-all duration-300 hover:-translate-y-2 relative">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <span className="inline-block bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-bold uppercase tracking-wider px-4 py-1.5 rounded-full shadow-lg">
+                    Most Popular
+                  </span>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold">Yearly</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Save 17% with annual billing</p>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold text-amber-600">₹4,999</span>
+                      <span className="text-gray-500 dark:text-gray-400">/year</span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">
+                      <span className="line-through">₹5,988</span> · Save ₹989/year
+                    </p>
+                  </div>
+
+                  <button onClick={onGetStarted} className="w-full px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all">
+                    Start Yearly Plan
+                  </button>
+
+                  <div className="pt-6 space-y-4 border-t border-amber-200 dark:border-slate-700">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Everything in Monthly, plus:</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Up to 10 cashiers</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Priority support</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Advanced reports</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Data export (CSV/PDF)</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">API access</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Custom Plan for Food Chains */}
+              <div className="group bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-lg hover:shadow-2xl border-2 border-gray-200 dark:border-slate-700 transition-all duration-300 hover:-translate-y-2">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h3 className="text-2xl font-bold">Enterprise</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">For food chains & franchises</p>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold text-gray-900 dark:text-white">Custom</span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-500">Tailored to your needs</p>
+                  </div>
+
+                  <a href="mailto:support@salesync.app" className="block w-full px-6 py-3 bg-gray-900 dark:bg-white hover:bg-gray-800 dark:hover:bg-gray-100 text-white dark:text-gray-900 font-medium rounded-xl shadow-md hover:shadow-lg transition-all text-center">
+                    Contact Sales
+                  </a>
+
+                  <div className="pt-6 space-y-4 border-t border-gray-200 dark:border-slate-700">
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-700 dark:text-gray-300 font-medium">Everything in Yearly, plus:</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Multiple locations</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Unlimited cashiers</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Central dashboard</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Custom integrations</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">Dedicated support</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className="text-sm text-gray-600 dark:text-gray-400">On-site training</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* Contact */}
-        <section id="contact" className="py-20 sm:py-28">
+        <section id="contact" className="py-20 sm:py-28 bg-gray-50 dark:bg-slate-900/50">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-slate-800 dark:to-slate-900 rounded-3xl p-12 border border-amber-100 dark:border-slate-700 text-center space-y-6">
               <h3 className="text-3xl font-bold">Get in touch</h3>
